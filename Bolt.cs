@@ -126,7 +126,7 @@ namespace RevampedOASIS
             }
         }
 
-        void set_tightness(int value, bool sendEvent)
+        internal void set_tightness(int value, bool sendEvent)
         {
             onTightnessSet?.Invoke(value - _tightness);
             transform.localPosition += transform.localRotation * positionStep * (value - _tightness);
@@ -137,7 +137,7 @@ namespace RevampedOASIS
             {
                 using (var p = screwEvent.Writer())
                 {
-                    p.Write(value);
+                    p.Write((byte)value);
                     p.Send();
                 }
             }
@@ -145,7 +145,7 @@ namespace RevampedOASIS
 
         void OnScrewEvent(GameEventReader p)
         {
-            tightness = p.ReadInt32();
+            set_tightness(p.ReadByte(), false);
         }
     }
 }

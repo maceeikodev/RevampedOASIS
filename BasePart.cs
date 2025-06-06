@@ -20,8 +20,8 @@ namespace RevampedOASIS
         public int tightness { get; private set; }
 
         public string partUID;
-        public bool sendInitialSync = true;
-        GameEvent attachUpdateEvent;
+        public bool createInitialSync = true;
+        GameEvent attachUpdateEvent, initSyncEvent;
 
         public Collider[] triggers;
         public Bolt[] bolts;
@@ -41,14 +41,26 @@ namespace RevampedOASIS
             rigidbody = GetComponent<Rigidbody>();
             if (bolts != null)
             {
-                for (var i = 0; i < bolts.Length; i++) bolts[i].onTightnessSet += (deltaTightness) => tightness += deltaTightness;
+                for (var i = 0; i < bolts.Length; i++)
+                {
+                    bolts[i].onTightnessSet += (deltaTightness) => tightness += deltaTightness;
+                    bolts[i].boltUID = partUID + "_bolt" + i;
+                }
             }
             if (!useCustomLayerMask) layerMask = 1 << 19;
 
             attachUpdateEvent = new GameEvent(partUID + "_attach", OnAttachUpdateEvent);
-            if (WreckMPGlobals.IsHost && sendInitialSync)
+            if (createInitialSync)
             {
-                WreckMPGlobals.OnMemberReady(SendAttachEvent);
+                initSyncEvent = new GameEvent(partUID + "_initsync", ReadInitialSync);
+                if (WreckMPGlobals.IsHost) WreckMPGlobals.OnMemberReady(user =>
+                {
+                    using (var p = initSyncEvent.Writer())
+                    {
+                        WriteInitialSync(p);
+                        p.Send(user, true);
+                    }
+                });
             }
         }
 
@@ -147,6 +159,41 @@ namespace RevampedOASIS
 
             triggers[attachedTo].enabled = true;
             _attachedTo = -1;
+        }
+
+        // Exposed for runtime created objects, so that user can implement all init syncs in one packet
+        public void WriteInitialSync(GameEventWriter p)
+        {
+            p.Write(attachedTo);
+            if (attachedTo >= 0)
+            {
+                if (bolts != null)
+                {
+                    p.Write(bolts.Length);
+                    for (int i = 0; i < bolts.Length; i++)
+                    {
+                        p.Write((byte)bolts[i].tightness);
+                    }
+                }
+                else
+                {
+                    p.Write(0);
+                }
+            }
+        }
+
+        public void ReadInitialSync(GameEventReader p)
+        {
+            attachedTo = p.ReadInt32();
+            if (attachedTo >= 0)
+            {
+                var count = p.ReadInt32();
+                for (int i = 0; i < count; i++)
+                {
+                    byte tightness = p.ReadByte();
+                    if (bolts != null && i < bolts.Length) bolts[i].set_tightness(tightness, false);
+                }
+            }
         }
 
         void set_attachedTo(int value, bool sendEvent)
