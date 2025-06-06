@@ -5,7 +5,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-namespace OASIS
+namespace RevampedOASIS
 {
     public class Bolt : Interactable
     {

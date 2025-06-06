@@ -1,6 +1,6 @@
 ﻿using HutongGames.PlayMaker;
 
-namespace OASIS
+namespace RevampedOASIS
 {
     public static class CursorGUI
     {

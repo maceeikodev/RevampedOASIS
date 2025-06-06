@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace OASIS
+namespace RevampedOASIS
 {
     public class Part : BasePart
     {

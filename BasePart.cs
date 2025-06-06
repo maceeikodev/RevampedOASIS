@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace OASIS
+namespace RevampedOASIS
 {
     public class BasePart : Interactable
     {

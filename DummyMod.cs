@@ -1,10 +1,10 @@
 ﻿using MSCLoader;
 
-namespace OASIS
+namespace RevampedOASIS
 {
     class DummyMod : Mod
     {
-        public override string ID => "OASIS_DummyMod";
+        public override string ID => "RevampedOASIS_DummyMod";
 
         public override string Version => null;
 
@@ -14,7 +14,7 @@ namespace OASIS
         {
             SetupFunction(Setup.OnMenuLoad, () =>
             {
-                ModUI.ShowCustomMessage("OASIS is not a mod. Move it to the References folder or delete it and let MSCLoader download the latest version automatically.", "READ ME", new MsgBoxBtn[]
+                ModUI.ShowCustomMessage("Revamped OASIS is not a mod. Move it to the References folder or delete it and let MSCLoader download the latest version automatically.", "READ ME", new MsgBoxBtn[]
                 {
                     ModUI.CreateMessageBoxBtn("I will", () => { }, true)
                 });

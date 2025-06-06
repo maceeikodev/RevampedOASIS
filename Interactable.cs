@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace OASIS
+namespace RevampedOASIS
 {
     public abstract class Interactable : MonoBehaviour
     {
@@ -9,7 +9,7 @@ namespace OASIS
         public LayerMask layerMask = ~(1 << 2);
         public float maxInteractionDistance = 1;
 
-        static readonly Dictionary<int, RaycastHit> raycasts = new();
+        static readonly Dictionary<int, RaycastHit> raycasts = new Dictionary<int, RaycastHit>();
         static Camera camera;
         static int lastFrame;
         static Ray ray;
