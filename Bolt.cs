@@ -4,6 +4,7 @@ using MSCLoader;
 using System;
 using System.Collections;
 using UnityEngine;
+using WreckAPI;
 
 namespace RevampedOASIS
 {
@@ -16,12 +17,10 @@ namespace RevampedOASIS
             get => _tightness;
             set
             {
-                onTightnessSet?.Invoke(value - _tightness);
-                transform.localPosition += transform.localRotation * positionStep * (value - _tightness);
-                transform.localRotation *= Quaternion.Euler(rotationStep * (value - _tightness));
-                _tightness = value;
+                set_tightness(value, true);
             }
         }
+
         public Action<int> onTightnessChanged;
         public float size = 1;
         public int maxTightness = 8;
@@ -30,7 +29,13 @@ namespace RevampedOASIS
         public Vector3 rotationStep = new Vector3(0, 0, 45);
         public bool disableSound;
         public bool useCustomLayerMask;
+
         internal Action<int> onTightnessSet;
+
+        internal string boltUID; // Set from part
+        GameEvent screwEvent;
+
+
         bool canBeBolted;
         bool onCooldown;
         int _tightness;
@@ -40,6 +45,31 @@ namespace RevampedOASIS
         static Transform spanner;
         static Material highlightMaterial;
         static FsmBool ratchetSwitch;
+
+        public void Awake()
+        {
+            renderer = GetComponent<Renderer>();
+            if (!useCustomLayerMask) layerMask = 1 << 12;
+
+            gameObject.SetActive(false);
+            transform.localPosition += transform.localRotation * positionStep * -maxTightness;
+            transform.localRotation *= Quaternion.Euler(rotationStep * -maxTightness);
+
+            if (!spanner)
+            {
+                spanner = GameObject.Find("PLAYER/Pivot/AnimPivot/Camera/FPSCamera").transform.Find("2Spanner");
+
+                var fsm = spanner.Find("Pivot/Ratchet").GetComponent<PlayMakerFSM>();
+                fsm.InitializeFSM();
+                ratchetSwitch = fsm.FsmVariables.FindFsmBool("Switch");
+
+                fsm = spanner.Find("Raycast").GetComponents<PlayMakerFSM>()[1];
+                fsm.InitializeFSM();
+                highlightMaterial = ((SetMaterial)fsm.FsmStates[2].Actions[1]).material.Value;
+            }
+
+            screwEvent = new GameEvent(boltUID, OnScrewEvent);
+        }
 
         public override void mouseOver()
         {
@@ -73,29 +103,6 @@ namespace RevampedOASIS
 
         public void OnDisable() => tryResetMaterial();
 
-        public void Awake()
-        {
-            renderer = GetComponent<Renderer>();
-            if (!useCustomLayerMask) layerMask = 1 << 12;
-
-            gameObject.SetActive(false);
-            transform.localPosition += transform.localRotation * positionStep * -maxTightness;
-            transform.localRotation *= Quaternion.Euler(rotationStep * -maxTightness);
-
-            if (!spanner)
-            {
-                spanner = GameObject.Find("PLAYER/Pivot/AnimPivot/Camera/FPSCamera").transform.Find("2Spanner");
-
-                var fsm = spanner.Find("Pivot/Ratchet").GetComponent<PlayMakerFSM>();
-                fsm.InitializeFSM();
-                ratchetSwitch = fsm.FsmVariables.FindFsmBool("Switch");
-
-                fsm = spanner.Find("Raycast").GetComponents<PlayMakerFSM>()[1];
-                fsm.InitializeFSM();
-                highlightMaterial = ((SetMaterial)fsm.FsmStates[2].Actions[1]).material.Value;
-            }
-        }
-
         IEnumerator tryChangeTightness(int value, float cooldown)
         {
             if (onCooldown || tightness + value > maxTightness || tightness + value < 0) yield break;
@@ -117,6 +124,28 @@ namespace RevampedOASIS
                 renderer.material = materialCache;
                 materialCache = null;
             }
+        }
+
+        void set_tightness(int value, bool sendEvent)
+        {
+            onTightnessSet?.Invoke(value - _tightness);
+            transform.localPosition += transform.localRotation * positionStep * (value - _tightness);
+            transform.localRotation *= Quaternion.Euler(rotationStep * (value - _tightness));
+            _tightness = value;
+
+            if (sendEvent)
+            {
+                using (var p = screwEvent.Writer())
+                {
+                    p.Write(value);
+                    p.Send();
+                }
+            }
+        }
+
+        void OnScrewEvent(GameEventReader p)
+        {
+            tightness = p.ReadInt32();
         }
     }
 }
