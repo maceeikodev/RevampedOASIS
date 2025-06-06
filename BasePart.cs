@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using WreckAPI;
 
 namespace RevampedOASIS
 {
@@ -11,26 +12,45 @@ namespace RevampedOASIS
             get => _attachedTo;
             set
             {
-                if (value == _attachedTo) return;
-
-                if (value < 0) detach();
-                else attach(value);
-
-                _attachedTo = value;
+                set_attachedTo(value, true);
             }
         }
+
         public Rigidbody rigidbody { get; internal set; }
         public int tightness { get; private set; }
-        public Action<int> onAttach;
-        public Action<int> onDetach;
-        public Func<bool> canAttach;
-        public Func<bool> canDetach;
+
+        public string partUID;
+        public bool sendInitialSync = true;
+        GameEvent attachUpdateEvent;
+
         public Collider[] triggers;
         public Bolt[] bolts;
         public bool disableSound;
         public bool useCustomLayerMask;
+
+        public event Action<int> onAttach;
+        public event Action<int> onDetach;
+        public event Func<bool> canAttach;
+        public event Func<bool> canDetach;
+
         int inTriggerIndex = -1;
         int _attachedTo = -1;
+
+        public void Awake()
+        {
+            rigidbody = GetComponent<Rigidbody>();
+            if (bolts != null)
+            {
+                for (var i = 0; i < bolts.Length; i++) bolts[i].onTightnessSet += (deltaTightness) => tightness += deltaTightness;
+            }
+            if (!useCustomLayerMask) layerMask = 1 << 19;
+
+            attachUpdateEvent = new GameEvent(partUID + "_attach", OnAttachUpdateEvent);
+            if (WreckMPGlobals.IsHost && sendInitialSync)
+            {
+                WreckMPGlobals.OnMemberReady(SendAttachEvent);
+            }
+        }
 
         public override void mouseOver()
         {
@@ -56,16 +76,6 @@ namespace RevampedOASIS
         public override void mouseExit()
         {
             if (attachedTo >= 0) CursorGUI.disassemble = false;
-        }
-
-        public void Awake()
-        {
-            rigidbody = GetComponent<Rigidbody>();
-            if (bolts != null)
-            {
-                for (var i = 0; i < bolts.Length; i++) bolts[i].onTightnessSet += (deltaTightness) => tightness += deltaTightness;
-            }
-            if (!useCustomLayerMask) layerMask = 1 << 19;
         }
 
         public void OnTriggerEnter(Collider other)
@@ -137,6 +147,35 @@ namespace RevampedOASIS
 
             triggers[attachedTo].enabled = true;
             _attachedTo = -1;
+        }
+
+        void set_attachedTo(int value, bool sendEvent)
+        {
+            if (value == _attachedTo) return;
+
+            if (value < 0) detach();
+            else attach(value);
+
+            _attachedTo = value;
+
+            if (sendEvent)
+            {
+                SendAttachEvent(0);
+            }
+        }
+
+        void SendAttachEvent(ulong target)
+        {
+            using (var p = attachUpdateEvent.Writer())
+            {
+                p.Write(attachedTo);
+                p.Send(target);
+            }
+        }
+
+        void OnAttachUpdateEvent(GameEventReader p)
+        {
+            set_attachedTo(p.ReadInt32(), false);
         }
     }
 }
