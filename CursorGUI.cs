@@ -49,6 +49,7 @@ namespace RevampedOASIS
             get => GUIsubtitle.Value;
             set => GUIsubtitle.Value = value;
         }
+
         static readonly FsmBool GUIassemble = FsmVariables.GlobalVariables.FindFsmBool("GUIassemble");
         static readonly FsmBool GUIbuy = FsmVariables.GlobalVariables.FindFsmBool("GUIbuy");
         static readonly FsmBool GUIdisassemble = FsmVariables.GlobalVariables.FindFsmBool("GUIdisassemble");
@@ -58,5 +59,50 @@ namespace RevampedOASIS
         static readonly FsmString GUIgear = FsmVariables.GlobalVariables.FindFsmString("GUIgear");
         static readonly FsmString GUIinteraction = FsmVariables.GlobalVariables.FindFsmString("GUIinteraction");
         static readonly FsmString GUIsubtitle = FsmVariables.GlobalVariables.FindFsmString("GUIsubtitle");
+
+        public static bool GetValue(this CursorType cursorType)
+        {
+            var variable = getVariable(cursorType);
+            if (variable != null) return variable.Value;
+            return false;
+        }
+
+        public static void SetValue(this CursorType cursorType, bool value)
+        {
+            var variable = getVariable(cursorType);
+            if (variable != null) variable.Value = value;
+        }
+
+        static FsmBool getVariable(CursorType cursorType)
+        {
+            switch (cursorType)
+            {
+                case CursorType.Assemble:
+                    return GUIassemble;
+                case CursorType.Buy:
+                    return GUIbuy;
+                case CursorType.Disassemble:
+                    return GUIdisassemble;
+                case CursorType.Drive:
+                    return GUIdrive;
+                case CursorType.Passenger:
+                    return GUIpassenger;
+                case CursorType.Use:
+                    return GUIuse;
+                default:
+                    return null;
+            }
+        }
+    }
+
+    public enum CursorType
+    {
+        None,
+        Assemble,
+        Buy,
+        Disassemble,
+        Drive,
+        Passenger,
+        Use
     }
 }
